@@ -61,4 +61,3 @@ writeRawOffenderSegmentTables <- function(conn, inputDfList, tableList) {
   tableList
 
 }
-

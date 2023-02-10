@@ -81,6 +81,7 @@ writeRawPropertySegmentTables <- function(conn, inputDfList, tableList) {
         select(qqqq)
     ) %>%
     filter(trimws(StateCode) != '') %>%
+    filter(! is.na(StateCode)) %>%
     mutate(EstimatedDrugQuantity=qqq + (qqqq*.001)) %>%
     left_join(tableList$TypeDrugMeasurementType %>% select(TypeDrugMeasurementTypeID, TypeDrugMeasurementCode=StateCode), by='TypeDrugMeasurementCode') %>%
     left_join(tableList$SuspectedDrugTypeType %>% select(SuspectedDrugTypeTypeID, StateCode), by='StateCode') %>%
@@ -121,4 +122,3 @@ writeRawPropertySegmentTables <- function(conn, inputDfList, tableList) {
   tableList
 
 }
-

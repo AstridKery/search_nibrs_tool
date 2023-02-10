@@ -32,7 +32,7 @@ loadCodeTables <- function(spreadsheetFile=NULL, conn=NULL, quiet=FALSE) {
       select(-starts_with('X_')) %>% as_tibble()
     if (!quiet) writeLines(paste0("Loading code table: ", codeTableName))
     if (!is.null(conn)) dbClearResult(dbSendQuery(conn, paste0("truncate ", codeTableName)))
-    if (codeTableName=='UCROffenseCodeType') {
+    if (codeTableName=='UcrOffenseCodeType') {
       colnames(ct) <- c('UCROffenseCodeTypeID', 'StateCode', 'StateDescription', 'OffenseCategory1',
                         'OffenseCategory2', 'OffenseCategory3', 'OffenseCategory4')
     } else if (codeTableName=='BiasMotivationType') {

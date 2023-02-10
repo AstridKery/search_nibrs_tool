@@ -59,7 +59,7 @@ writeRawArresteeSegmentTables <- function(conn, inputDfList, tableList) {
     left_join(tableList$ResidentStatusOfPersonType %>% select(ResidentStatusOfPersonTypeID, StateCode), by=c('V6018'='StateCode')) %>%
     left_join(tableList$DispositionOfArresteeUnder18Type %>% select(DispositionOfArresteeUnder18TypeID, StateCode),
               by=c('V6019'='StateCode')) %>%
-    left_join(tableList$UCROffenseCodeType %>% select(UCROffenseCodeTypeID, StateCode), by=c('V6011'='StateCode')) %>%
+    left_join(tableList$UcrOffenseCodeType %>% select(UCROffenseCodeTypeID, StateCode), by=c('V6011'='StateCode')) %>%
     left_join(tableList$TypeOfArrestType %>% select(TypeOfArrestTypeID, StateCode), by=c('V6009'='StateCode')) %>%
     mutate(RaceOfPersonTypeID=ifelse(is.na(RaceOfPersonTypeID), 99998L, RaceOfPersonTypeID),
            UCROffenseCodeTypeID=ifelse(is.na(UCROffenseCodeTypeID), 99998L, UCROffenseCodeTypeID),
@@ -76,6 +76,7 @@ writeRawArresteeSegmentTables <- function(conn, inputDfList, tableList) {
     gather(key='index', value='StateCode', V6012, V6013) %>%
     select(-index) %>%
     filter(trimws(StateCode) != '') %>%
+    filter(! is.na(StateCode)) %>%
     mutate(AutomaticWeaponIndicator=str_sub(StateCode, 3, 3), StateCode=str_sub(StateCode, 1, 2)) %>%
     left_join(tableList$ArresteeWasArmedWithType %>% select(ArresteeWasArmedWithTypeID, StateCode), by='StateCode') %>%
     mutate(ArresteeSegmentWasArmedWithID=row_number()) %>%
@@ -145,7 +146,7 @@ writeRawArrestReportSegmentTables <- function(conn, inputDfList, state, tableLis
     left_join(tableList$ResidentStatusOfPersonType %>% select(ResidentStatusOfPersonTypeID, StateCode), by=c('V7016'='StateCode')) %>%
     left_join(tableList$DispositionOfArresteeUnder18Type %>% select(DispositionOfArresteeUnder18TypeID, StateCode),
               by=c('V7017'='StateCode')) %>%
-    left_join(tableList$UCROffenseCodeType %>% select(UCROffenseCodeTypeID, StateCode), by=c('V7009'='StateCode')) %>%
+    left_join(tableList$UcrOffenseCodeType %>% select(UCROffenseCodeTypeID, StateCode), by=c('V7009'='StateCode')) %>%
     left_join(tableList$TypeOfArrestType %>% select(TypeOfArrestTypeID, StateCode), by=c('V7008'='StateCode')) %>%
     mutate(RaceOfPersonTypeID=ifelse(is.na(RaceOfPersonTypeID), 99998L, RaceOfPersonTypeID),
            UCROffenseCodeTypeID=ifelse(is.na(UCROffenseCodeTypeID), 99998L, UCROffenseCodeTypeID),
@@ -162,6 +163,7 @@ writeRawArrestReportSegmentTables <- function(conn, inputDfList, state, tableLis
     gather(key='index', value='StateCode', V7010, V7011) %>%
     select(-index) %>%
     filter(trimws(StateCode) != '') %>%
+    filter(! is.na(StateCode)) %>%
     mutate(AutomaticWeaponIndicator=str_sub(StateCode, 3, 3), StateCode=str_sub(StateCode, 1, 2)) %>%
     left_join(tableList$ArresteeWasArmedWithType %>% select(ArresteeWasArmedWithTypeID, StateCode), by='StateCode') %>%
     mutate(ArrestReportSegmentWasArmedWithID=row_number()) %>%

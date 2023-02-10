@@ -16,9 +16,9 @@
 truncateVictim <- function(conn) {
   dbClearResult(dbSendQuery(conn, "truncate VictimSegment"))
   dbClearResult(dbSendQuery(conn, "truncate VictimOffenderAssociation"))
-  dbClearResult(dbSendQuery(conn, "truncate VictimOffenseAssociation"))
-  dbClearResult(dbSendQuery(conn, "truncate AggravatedAssaultHomicideCircumstances"))
-  dbClearResult(dbSendQuery(conn, "truncate TypeInjury"))
+  dbClearResult(dbSendQuery(conn, "truncate victimOffenseAssociation"))
+  dbClearResult(dbSendQuery(conn, "truncate aggravatedAssaultHomicideCircumstances"))
+  dbClearResult(dbSendQuery(conn, "truncate typeInjury"))
 }
 
 #' @import dplyr
@@ -34,6 +34,7 @@ writeRawVictimSegmentTables <- function(conn, inputDfList, tableList) {
   if ('ORI' %in% colnames(victimSegmentDf)) {
     victimSegmentDf <- victimSegmentDf %>% rename(V4003=ORI, V4004=INCNUM)
   }
+
 
   victimSegmentDf <- victimSegmentDf %>%
     inner_join(tableList$Agency %>% select(AgencyORI), by=c('V4003'='AgencyORI')) %>%
@@ -72,11 +73,13 @@ writeRawVictimSegmentTables <- function(conn, inputDfList, tableList) {
               by=c('V4025'='StateCode')) %>%
     mutate(VictimSegmentID=row_number(), OfficerActivityCircumstanceTypeID=case_when(is.na(OfficerActivityCircumstanceTypeID) ~ 99998L, TRUE ~ OfficerActivityCircumstanceTypeID)) %>% as_tibble()
 
+
   VictimOffenseAssociation <- VictimSegment %>%
     select(AdministrativeSegmentID, VictimSegmentID, V4007:V4016) %>%
     gather(key='index', value='UCROffenseCode', V4007:V4016) %>%
     select(-index) %>%
     filter(trimws(UCROffenseCode) != '') %>%
+    filter(! is.na(UCROffenseCode)) %>%
     inner_join(tableList$OffenseSegment %>% select(AdministrativeSegmentID, OffenseSegmentID, UCROffenseCode), by=c('AdministrativeSegmentID', 'UCROffenseCode')) %>%
     mutate(VictimOffenseAssociationID=row_number()) %>%
     select(VictimOffenseAssociationID, VictimSegmentID, OffenseSegmentID)
@@ -86,6 +89,7 @@ writeRawVictimSegmentTables <- function(conn, inputDfList, tableList) {
     gather(key='index', value='StateCode', V4023, V4024) %>%
     select(-index) %>%
     filter(trimws(StateCode) != '') %>%
+    filter(! is.na(StateCode)) %>%
     inner_join(tableList$AggravatedAssaultHomicideCircumstancesType %>%
                  select(AggravatedAssaultHomicideCircumstancesTypeID, StateCode),
                by='StateCode') %>%
@@ -96,6 +100,7 @@ writeRawVictimSegmentTables <- function(conn, inputDfList, tableList) {
     select(VictimSegmentID, V4026:V4030) %>%
     gather(key='index', value='StateCode', V4026:V4030) %>%
     select(-index) %>%
+    filter(! is.na(StateCode)) %>%
     filter(trimws(StateCode) != '') %>%
     inner_join(tableList$TypeInjuryType %>% select(TypeInjuryTypeID, StateCode), by='StateCode') %>%
     select(VictimSegmentID, TypeInjuryTypeID) %>%
@@ -104,6 +109,7 @@ writeRawVictimSegmentTables <- function(conn, inputDfList, tableList) {
   VictimOffenderAssociation <- VictimSegment %>%
     select(AdministrativeSegmentID, VictimSegmentID, V4031:V4050) %>%
     gather(key='var', value='value', V4031:V4050) %>%
+    filter(! is.na(value)) %>%
     filter(trimws(value) != '') %>%
     mutate(varnum=as.integer(str_sub(var, 2, 5))) %>%
     mutate(
@@ -116,8 +122,9 @@ writeRawVictimSegmentTables <- function(conn, inputDfList, tableList) {
         TRUE ~ varnum
       ),
       seqnum=seqnum-4030-(seqnum-4030-1)/2) %>%
-    select(-varnum) %>%
-    spread(key=var, value=value) %>%
+    select(-varnum)
+
+  VictimOffenderAssociation <- VictimOffenderAssociation %>% spread(key=var, value=value) %>%
     mutate(OffenderSequenceNumber=as.integer(OffenderSequenceNumber)) %>%
     inner_join(tableList$OffenderSegment %>% select(AdministrativeSegmentID, OffenderSegmentID, OffenderSequenceNumber),
                by=c('AdministrativeSegmentID', 'OffenderSequenceNumber')) %>%
@@ -141,7 +148,7 @@ writeRawVictimSegmentTables <- function(conn, inputDfList, tableList) {
   attr(VictimSegment, 'type') <- 'FT'
 
   writeLines(paste0("Writing ", nrow(VictimOffenseAssociation), " VictimOffenseAssociation association rows to database"))
-  writeDataFrameToDatabase(conn, VictimOffenseAssociation, 'VictimOffenseAssociation', viaBulk=TRUE, localBulk=FALSE, append=FALSE)
+  writeDataFrameToDatabase(conn, VictimOffenseAssociation, 'victimOffenseAssociation', viaBulk=TRUE, localBulk=FALSE, append=FALSE)
 
   attr(VictimOffenseAssociation, 'type') <- 'AT'
 
@@ -151,12 +158,12 @@ writeRawVictimSegmentTables <- function(conn, inputDfList, tableList) {
   attr(VictimOffenderAssociation, 'type') <- 'AT'
 
   writeLines(paste0("Writing ", nrow(AggravatedAssaultHomicideCircumstances), " AggravatedAssaultHomicideCircumstances association rows to database"))
-  writeDataFrameToDatabase(conn, AggravatedAssaultHomicideCircumstances, 'AggravatedAssaultHomicideCircumstances', viaBulk=TRUE, localBulk=FALSE, append=FALSE)
+  writeDataFrameToDatabase(conn, AggravatedAssaultHomicideCircumstances, 'aggravatedAssaultHomicideCircumstances', viaBulk=TRUE, localBulk=FALSE, append=FALSE)
 
   attr(AggravatedAssaultHomicideCircumstances, 'type') <- 'AT'
 
   writeLines(paste0("Writing ", nrow(TypeInjury), " TypeInjury association rows to database"))
-  writeDataFrameToDatabase(conn, TypeInjury, 'TypeInjury', viaBulk=TRUE, localBulk=FALSE, append=FALSE)
+  writeDataFrameToDatabase(conn, TypeInjury, 'typeInjury', viaBulk=TRUE, localBulk=FALSE, append=FALSE)
 
   attr(TypeInjury, 'type') <- 'AT'
 
